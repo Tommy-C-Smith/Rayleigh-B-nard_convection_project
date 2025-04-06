@@ -14,7 +14,6 @@ import glob
 import re
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# === Sort snapshot files numerically ===
 def extract_snapshot_number(filename):
     match = re.search(r'snapshots_2D_s(\d+).h5', filename)
     return int(match.group(1)) if match else -1
@@ -23,19 +22,17 @@ snapshot_files = sorted(glob.glob('snapshots_2D/snapshots_2D_s*.h5'), key=extrac
 if not snapshot_files:
     raise FileNotFoundError("No snapshot files found.")
 
-# === Domain info ===
 Lx, Lz = 8, 1
 x = z = None
 
-# === Collect all rotated frames ===
 buoyancy_frames = []
 vorticity_frames = []
 time_stamps = []
 
-for file in snapshot_files[-4:]:  # Last 4 snapshots
+for file in snapshot_files[-4:]: 
     with h5py.File(file, 'r') as f:
-        b = f['tasks']['buoyancy'][:]     # (Nt, Nz, Nx)
-        vort = f['tasks']['vorticity'][:] # (Nt, Nz, Nx)
+        b = f['tasks']['buoyancy'][:]   
+        vort = f['tasks']['vorticity'][:] 
         times = f['scales']['sim_time'][:]
 
         if x is None or z is None:
@@ -50,14 +47,12 @@ for file in snapshot_files[-4:]:  # Last 4 snapshots
             vorticity_frames.append(vort_rot)
             time_stamps.append(times[i])
 
-# === Set up figure and axes ===
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5), sharex=True)
 
-# --- Initial frame ---
 pcm1 = ax1.pcolormesh(z, x, buoyancy_frames[0], shading='auto', cmap='plasma')
-ax1.set_xticks(np.linspace(z[0], z[-1], 5))  # z axis (used for horizontal) becomes x
-ax1.set_xticklabels(np.linspace(0, Lx, 5))   # relabel it as if it's x
-ax1.set_yticks(np.linspace(x[0], x[-1], 5))  # x axis (used for vertical) becomes z
+ax1.set_xticks(np.linspace(z[0], z[-1], 5)) 
+ax1.set_xticklabels(np.linspace(0, Lx, 5))  
+ax1.set_yticks(np.linspace(x[0], x[-1], 5))  
 ax1.set_yticklabels(np.linspace(0, Lz, 5))
 divider1 = make_axes_locatable(ax1)
 cax1 = divider1.append_axes("right", size="2%", pad=0.07)
@@ -84,9 +79,6 @@ ax2.set_xlabel("x-axis", fontsize=15)
 ax2.set_ylabel("z-axis", fontsize=15)
 ax2.tick_params(labelsize=12)
 
-
-
-# === Animation update function ===
 def update(frame_idx):
     pcm1.set_array(buoyancy_frames[frame_idx].ravel())
     pcm2.set_array(vorticity_frames[frame_idx].ravel())
@@ -94,7 +86,6 @@ def update(frame_idx):
     ax2.set_title(f"Vorticity at t = {time_stamps[frame_idx]:.2f}")
     return pcm1, pcm2, 
 
-# === Create and save animation ===
 ani = animation.FuncAnimation(fig, update, frames=len(buoyancy_frames), interval=50, blit=False)
 
 print("Saving GIF...")
