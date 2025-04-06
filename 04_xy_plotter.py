@@ -13,7 +13,6 @@ import glob
 import re
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# === Sort snapshot files numerically ===
 def extract_snapshot_number(filename):
     match = re.search(r'snapshots_3D_s(\d+).h5', filename)
     return int(match.group(1)) if match else -1
@@ -22,9 +21,8 @@ snapshot_files = sorted(glob.glob('snapshots_3D/snapshots_3D_s*.h5'), key=extrac
 if len(snapshot_files) < 1:
     raise FileNotFoundError("No snapshot files found")
 
-latest_files = snapshot_files[-3:]  # Last 3 snapshots
+latest_files = snapshot_files[-3:] 
 
-# === Domain info ===
 Lx = 8
 Ly = 8
 x = None
@@ -32,8 +30,8 @@ y = None
 
 for file in latest_files:
     with h5py.File(file, 'r') as f:
-        b = f['tasks']['buoyancy'][:]     # shape: (Nt, Nz, Ny, Nx)
-        vort = f['tasks']['vorticity'][:] # shape: (Nt, Nz, Ny, Nx)
+        b = f['tasks']['buoyancy'][:] 
+        vort = f['tasks']['vorticity'][:] 
         times = f['scales']['sim_time'][:]
 
         if x is None or y is None:
@@ -41,13 +39,13 @@ for file in latest_files:
             x = np.linspace(0, Lx, Nx)
             y = np.linspace(0, Ly, Ny)
 
-        z_index = 54  # Top z-plane
-        b_xy = b[-1, :, :, z_index]  # shape: (Ny, Nx)
-        vort_xy = vort[-1, :, :, z_index]  # shape: (Ny, Nx)
+        z_index = 54 
+        b_xy = b[-1, :, :, z_index] 
+        vort_xy = vort[-1, :, :, z_index] 
         
         extent = (x.min(), x.max(), y.min(), y.max())
 
-        # === Buoyancy figure ===
+    
         fig1, ax1 = plt.subplots(figsize=(10, 8))
         im1 = ax1.imshow(b_xy, extent=extent, origin='lower',
                          cmap='plasma', interpolation='bicubic', aspect='auto')
@@ -61,7 +59,7 @@ for file in latest_files:
         plt.tight_layout()
         plt.show()
 
-        # === Vorticity figure ===
+        
         fig2, ax2 = plt.subplots(figsize=(10, 8))
         im2 = ax2.imshow(vort_xy, extent=extent, origin='lower',
                          cmap='coolwarm', interpolation='bicubic', aspect='auto')
