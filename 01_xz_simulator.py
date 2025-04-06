@@ -11,8 +11,6 @@ import dedalus.public as d3
 import logging
 logger = logging.getLogger(__name__)
 
-
-# Parameters
 Lx, Lz = 4, 1
 Nx, Nz = 256, 64
 Rayleigh = 8e6
@@ -23,13 +21,11 @@ timestepper = d3.RK222
 max_timestep = 0.125
 dtype = np.float64
 
-# Bases
 coords = d3.CartesianCoordinates('x', 'z')
 dist = d3.Distributor(coords, dtype=dtype)
 xbasis = d3.RealFourier(coords['x'], size=Nx, bounds=(0, Lx), dealias=dealias)
 zbasis = d3.ChebyshevT(coords['z'], size=Nz, bounds=(0, Lz), dealias=dealias)
 
-# Fields
 p = dist.Field(name='p', bases=(xbasis,zbasis))
 b = dist.Field(name='b', bases=(xbasis,zbasis))
 u = dist.VectorField(coords, name='u', bases=(xbasis,zbasis))
@@ -39,7 +35,6 @@ tau_b2 = dist.Field(name='tau_b2', bases=xbasis)
 tau_u1 = dist.VectorField(coords, name='tau_u1', bases=xbasis)
 tau_u2 = dist.VectorField(coords, name='tau_u2', bases=xbasis)
 
-# Substitutions
 kappa = (Rayleigh * Prandtl)**(-1/2)
 nu = (Rayleigh / Prandtl)**(-1/2)
 x, z = dist.local_grids(xbasis, zbasis)
@@ -49,9 +44,7 @@ lift = lambda A: d3.Lift(A, lift_basis, -1)
 grad_u = d3.grad(u) + ez*lift(tau_u1) # First-order reduction
 grad_b = d3.grad(b) + ez*lift(tau_b1) # First-order reduction
 
-# Problem
-# First-order form: "div(f)" becomes "trace(grad_f)"
-# First-order form: "lap(f)" becomes "div(grad_f)"
+
 problem = d3.IVP([p, b, u, tau_p, tau_b1, tau_b2, tau_u1, tau_u2], namespace=locals())
 problem.add_equation("trace(grad_u) + tau_p = 0")
 problem.add_equation("dt(b) - kappa*div(grad_b) + lift(tau_b2) = - u@grad(b)")
@@ -62,30 +55,24 @@ problem.add_equation("b(z=Lz) = 0")
 problem.add_equation("u(z=Lz) = 0")
 problem.add_equation("integ(p) = 0") # Pressure gauge
 
-# Solver
 solver = problem.build_solver(timestepper)
 solver.stop_sim_time = stop_sim_time
 
-# Initial conditions
 b.fill_random('g', seed=42, distribution='normal', scale=1e-3) # Random noise
-b['g'] *= z * (Lz - z) # Damp noise at walls
-b['g'] += Lz - z # Add linear background
+b['g'] *= z * (Lz - z) 
+b['g'] += Lz - z 
 
-# Analysis
 snapshots = solver.evaluator.add_file_handler('snapshots_2D', sim_dt=0.25, max_writes=50)
 snapshots.add_task(b, name='buoyancy')
 snapshots.add_task(-d3.div(d3.skew(u)), name='vorticity')
 
-# CFL
 CFL = d3.CFL(solver, initial_dt=max_timestep, cadence=10, safety=0.5, threshold=0.05,
              max_change=1.5, min_change=0.5, max_dt=max_timestep)
 CFL.add_velocity(u)
 
-# Flow properties
 flow = d3.GlobalFlowProperty(solver, cadence=10)
 flow.add_property(np.sqrt(u@u)/nu, name='Re')
 
-# Main loop
 startup_iter = 10
 try:
     logger.info('Starting main loop')
